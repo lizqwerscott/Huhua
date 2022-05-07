@@ -44,6 +44,13 @@ class MainActivity : AppCompatActivity() {
         minutePicker.maxValue = 59
         setPickerValue(minutePicker, "minute")
 
+        hourPicker.setOnValueChangedListener { numberPicker, i, i2 ->
+            saveSetTime(i2, minutePicker.value)
+        }
+
+        minutePicker.setOnValueChangedListener { numberPicker, i, i2 ->
+            saveSetTime(hourPicker.value, i2)
+        }
 
         val accessibility = findViewById<Button>(R.id.accessibility)
         if (isAccessibilituSerivceOpen) {
@@ -61,15 +68,25 @@ class MainActivity : AppCompatActivity() {
         registerReceiver(receiver, intentFilter)
         val start = findViewById<Button>(R.id.start)
         start.setOnClickListener {
-            val editor = settings.edit()
-            val times = hourPicker.value * 60 + minutePicker.value
-            editor.putInt("time", times)
-            editor.putInt("hour", hourPicker.value)
-            editor.putInt("minute", minutePicker.value)
-            editor.apply()
-            Toast.makeText(baseContext, "Time:$times", Toast.LENGTH_LONG).show()
+            saveSetTime(hourPicker.value, minutePicker.value)
             moveTaskToBack(true)
         }
+    }
+
+    private fun saveSetTime(hour: Int, minute: Int) {
+        val settings = getSharedPreferences("settings", 0)
+        val editor = settings.edit()
+        val times = hour * 60 + minute
+        editor.putInt("time", times)
+        editor.putInt("hour", hour)
+        editor.putInt("minute", minute)
+        editor.apply()
+        var showTimeStr = "时长:"
+        if (hour != 0) {
+            showTimeStr += "${hour}小时"
+        }
+        showTimeStr += "${minute}分钟"
+        Toast.makeText(baseContext, showTimeStr, Toast.LENGTH_SHORT).show()
     }
 
     private fun getMaxHour(age: Int): Int {

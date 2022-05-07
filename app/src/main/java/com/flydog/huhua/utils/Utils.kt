@@ -1,17 +1,12 @@
 package com.flydog.huhua.utils
 
 import android.app.Activity
-import android.app.ActivityManager
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
-import android.os.Build
 import android.provider.Settings
-import android.text.TextUtils
 import android.util.Log
 import android.widget.Toast
-import com.flydog.huhua.FloatAccessibilityService
-import java.util.*
 
 object Utils {
     const val REQUEST_FLOAT_CODE=1001

@@ -14,11 +14,13 @@ import androidx.annotation.RequiresApi
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.LifecycleRegistry
+import com.flydog.huhua.common.TimeUtil
 import com.flydog.huhua.utils.ItemViewClickListener
 import com.flydog.huhua.utils.ItemViewTouchListener
 import com.flydog.huhua.utils.ViewModleMain
 import com.flydog.huhua.utils.Utils.isNull
 import java.text.SimpleDateFormat
+import java.time.LocalTime
 import java.util.*
 
 class FloatAccessibilityService : AccessibilityService(), LifecycleOwner{
@@ -30,9 +32,9 @@ class FloatAccessibilityService : AccessibilityService(), LifecycleOwner{
     private val simpleDateFormat: SimpleDateFormat = SimpleDateFormat("HH:mm:ss", Locale.getDefault())
     private val simpleDateFormatDate: SimpleDateFormat = SimpleDateFormat("yyyy-MM-dd", Locale.getDefault())
 
-    private var douDate: String = simpleDateFormatDate.format(System.currentTimeMillis())
-    private var douTime: Long = 0
-    private var lastJTime: Long = 0
+    private var watchShortVideoDate: String = simpleDateFormatDate.format(System.currentTimeMillis())
+    private var watchShortVideoTime: Long = 0
+    private var lastWatchShortVideoUseTime: Long = 0
 
 
     private var isClosep: Boolean = false
@@ -131,22 +133,22 @@ class FloatAccessibilityService : AccessibilityService(), LifecycleOwner{
         Log.w("Info", "Start$packageName")
         //var activityInfo = tryGetActivity(componentName)
         val nowDate = simpleDateFormatDate.format(System.currentTimeMillis())
-        if (douDate != nowDate) {
-            douDate = nowDate
-            douTime = 0
+        if (watchShortVideoDate != nowDate) {
+            watchShortVideoDate = nowDate
+            watchShortVideoTime = 0
             isClosep = false
         }
         if (short_video.contains(packageName)) {
             Log.w("Info", "--------------------------")
-            if (lastJTime == 0.toLong()) {
-                lastJTime = System.currentTimeMillis()
-                Log.w("Info", "Event:Set:LastJTime$lastJTime")
+            if (lastWatchShortVideoUseTime == 0.toLong()) {
+                lastWatchShortVideoUseTime = System.currentTimeMillis()
+                Log.w("Info", "Event:Set:LastJTime$lastWatchShortVideoUseTime")
             } else {
                 val nowTime: Long = System.currentTimeMillis()
-                douTime += (nowTime - lastJTime)
-                lastJTime = nowTime
-                Log.w("Info", "Event:LastJTime$lastJTime")
-                Log.w("Info", "Event:douTime$douTime")
+                watchShortVideoTime += (nowTime - lastWatchShortVideoUseTime)
+                lastWatchShortVideoUseTime = nowTime
+                Log.w("Info", "Event:LastJTime$lastWatchShortVideoUseTime")
+                Log.w("Info", "Event:douTime$watchShortVideoTime")
             }
             Log.w("Info", "--------------------------")
             if (isClose()) {
@@ -160,9 +162,21 @@ class FloatAccessibilityService : AccessibilityService(), LifecycleOwner{
                 intent.addCategory(Intent.CATEGORY_HOME)
                 intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
                 startActivity(intent)
+            } else {
+                if (isInNight()) {
+                    if (!isClosep) {
+                        ViewModleMain.isShowWindow.postValue(false)
+                        Toast.makeText(baseContext, "晚上了, 该休息了", Toast.LENGTH_SHORT).show()
+                    }
+                    isClosep = true
+                    val intent = Intent(Intent.ACTION_MAIN)
+                    intent.addCategory(Intent.CATEGORY_HOME)
+                    intent.flags = Intent.FLAG_ACTIVITY_NEW_TASK
+                    startActivity(intent)
+                }
             }
         } else {
-            lastJTime = 0
+            lastWatchShortVideoUseTime = 0
         }
     }
 
@@ -173,14 +187,31 @@ class FloatAccessibilityService : AccessibilityService(), LifecycleOwner{
         val setting = getSharedPreferences("settings", 0)
         val minute = setting.getInt("time", -1)
         if (minute == -1) {
-            Toast.makeText(baseContext, "Please setting usage time", Toast.LENGTH_LONG).show()
+            Toast.makeText(baseContext, "请设置可用时间", Toast.LENGTH_LONG).show()
             return -999999
         }
-        return minute * 60 * 1000 - douTime
+        return minute * 60 * 1000 - watchShortVideoTime
     }
 
     private fun isClose(): Boolean {
         return getLastTime() <= 0
+    }
+
+    private fun isInNight(): Boolean {
+        val nowTime = TimeUtil().timeToSecond(LocalTime.now())
+        val setting = getSharedPreferences("settings", 0)
+        val age = setting.getInt("age", -1)
+        var nightStartTime = 0
+        var nightEndTime = 0
+        if (age < 18) {
+            nightStartTime = TimeUtil().generateTimeSecond(21)
+            nightEndTime = TimeUtil().generateTimeSecond(8)
+        } else {
+            nightStartTime = TimeUtil().generateTimeSecond(22)
+            nightEndTime = TimeUtil().generateTimeSecond(7)
+        }
+
+        return nightStartTime <= nowTime || nowTime <= nightEndTime
     }
 
 }
